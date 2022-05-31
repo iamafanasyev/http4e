@@ -2,10 +2,10 @@ defmodule Http4e.Response do
   @type body_stream :: Coroutine.t({}, body_part :: String.t())
 
   @type t :: %{
-               body_stream: body_stream(),
-               headers: %{String.t() => String.t()},
-               status: [code: non_neg_integer(), reason: String.t()],
-             }
+          body_stream: body_stream(),
+          headers: %{String.t() => String.t()},
+          status: [code: non_neg_integer(), reason: String.t()],
+        }
 
   defmodule Status do
     @type t :: [code: non_neg_integer(), reason: String.t()]

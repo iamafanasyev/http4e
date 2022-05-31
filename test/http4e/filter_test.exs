@@ -6,8 +6,8 @@ defmodule Http4e.Server.FilterTest do
 
     @impl Http4e.Handler.Behaviour
     def handle(assignments: %{filter_power: filter_power}, request: _) when filter_power >= 1 do
-      body =
-        to_string(filter_power)
+      body = to_string(filter_power)
+
       %{
         body_stream: Coroutine.from(body),
         headers: %{
@@ -30,8 +30,12 @@ defmodule Http4e.Server.FilterTest do
       {
         :handler,
         fn
-          [assignments: %{filter_power: filter_power} = assignments, request: %{} = request] when filter_power >= 1 ->
-            handle.(assignments: Map.put(assignments, :filter_power, Integer.pow(filter_power, 2)), request: request)
+          [assignments: %{filter_power: filter_power} = assignments, request: %{} = request]
+          when filter_power >= 1 ->
+            handle.(
+              assignments: Map.put(assignments, :filter_power, Integer.pow(filter_power, 2)),
+              request: request
+            )
 
           [assignments: %{} = assignments, request: %{} = request] ->
             handle.(assignments: Map.put(assignments, :filter_power, 2), request: request)
@@ -51,8 +55,12 @@ defmodule Http4e.Server.FilterTest do
       {
         :handler,
         fn
-          [assignments: %{filter_power: filter_power} = assignments, request: %{} = request] when filter_power >= 1 ->
-            handle.(assignments: Map.put(assignments, :filter_power, Integer.pow(filter_power, 3)), request: request)
+          [assignments: %{filter_power: filter_power} = assignments, request: %{} = request]
+          when filter_power >= 1 ->
+            handle.(
+              assignments: Map.put(assignments, :filter_power, Integer.pow(filter_power, 3)),
+              request: request
+            )
 
           [assignments: %{} = assignments, request: %{} = request] ->
             handle.(assignments: Map.put(assignments, :filter_power, 3), request: request)
@@ -67,18 +75,20 @@ defmodule Http4e.Server.FilterTest do
         Handler.as_handler()
         |> Power2Filter.filter()
         |> Power3Filter.filter()
-      %{body_stream: response_body_stream} =
-        filtered_handle.(assignments: %{}, request: %{})
-      assert [yield: "9", cont: :nil] = response_body_stream.({}),
+
+      %{body_stream: response_body_stream} = filtered_handle.(assignments: %{}, request: %{})
+
+      assert [yield: "9", cont: nil] = response_body_stream.({}),
              "Expected filter application from the last piped one up to the first"
 
       {:handler, filtered_handle} =
         Handler.as_handler()
         |> Power3Filter.filter()
         |> Power2Filter.filter()
-      %{body_stream: response_body_stream} =
-        filtered_handle.(assignments: %{}, request: %{})
-      assert [yield: "8", cont: :nil] = response_body_stream.({}),
+
+      %{body_stream: response_body_stream} = filtered_handle.(assignments: %{}, request: %{})
+
+      assert [yield: "8", cont: nil] = response_body_stream.({}),
              "Expected filter application from the last piped one up to the first"
     end
   end

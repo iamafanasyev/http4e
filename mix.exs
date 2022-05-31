@@ -22,6 +22,7 @@ defmodule Http4e.MixProject do
   defp deps do
     [
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:freedom_formatter, "~> 1.0", only: [:dev], runtime: false},
     ]
   end
 end
