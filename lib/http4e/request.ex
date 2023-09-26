@@ -1,21 +1,16 @@
 defmodule Http4e.Request do
-  @type body_stream ::
-          Coroutine.t([body_part_size_in_bytes: non_neg_integer()], body_part :: String.t())
-  @type headers :: %{(downcased_key :: String.t()) => original_value :: String.t()}
-
-  @type t ::
-          %{
-            headers: headers(),
-            method: :DELETE | :GET | :HEAD | :OPTIONS | :TRACE,
-            path: String.t(),
-            query_parameters: %{String.t() => String.t()},
-          }
-          | %{
-              await_body: (() -> body :: String.t()),
-              body_stream: body_stream(),
-              headers: headers(),
-              method: :PATCH | :POST | :PUT,
-              path: String.t(),
-              query_parameters: %{String.t() => String.t()},
-            }
+  @type body_stream() :: Http4e.BodyStream.t()
+  @type headers() :: %{(downcased_header_name :: String.t()) => header_value :: String.t()}
+  @type method() :: :DELETE | :GET | :HEAD | :OPTIONS | :PATCH | :POST | :PUT | :TRACE
+  @type path() :: String.t()
+  @type query_parameters() :: %{String.t() => list(String.t())}
+  @keys [
+    :body_stream,
+    :headers,
+    :method,
+    :path,
+    :query_parameters,
+  ]
+  @enforce_keys @keys
+  defstruct @keys
 end

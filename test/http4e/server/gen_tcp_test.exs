@@ -1,93 +1,16 @@
 defmodule Http4e.Server.GenTcpTest do
   use ExUnit.Case
 
-  defmodule Handler do
-    use Http4e.Handler.Behaviour
-
-    @impl Http4e.Handler.Behaviour
-    def handle(assignments: %{}, request: %{method: :GET, path: "/ping"}) do
-      %{
-        body_stream: Coroutine.from("pong"),
-        headers: %{
-          "Content-Length" => 4,
-          "Content-Type" => "text/plain",
-        },
-        status: Http4e.Response.Status.ok(),
-      }
-    end
-
-    def handle(
-          assignments: %{},
-          request: %{await_body: await_body, method: :POST, path: "/short_article"}
-        ) do
-      article_review = await_body.()
-
-      %{
-        body_stream: Coroutine.from(article_review),
-        headers: %{
-          "Content-Length" => String.length(article_review),
-          "Content-Type" => "text/plain",
-        },
-        status: Http4e.Response.Status.ok(),
-      }
-    end
-
-    def handle(
-          assignments: %{},
-          request: %{body_stream: body_stream, method: :POST, path: "/long_article"}
-        ) do
-      %{
-        body_stream:
-          simulate_downloading_and_stream_it(request_body_stream: body_stream, chunk_byte_size: 1),
-        headers: %{
-          "Content-Type" => "text/plain",
-        },
-        status: Http4e.Response.Status.ok(),
-      }
-    end
-
-    @spec simulate_downloading_and_stream_it(
-            request_body_stream: Http4e.Request.body_stream(),
-            chunk_byte_size: pos_integer()
-          ) :: Http4e.Response.body_stream()
-    defp simulate_downloading_and_stream_it(
-           request_body_stream: request_body_stream,
-           chunk_byte_size: chunk_byte_size
-         ) do
-      fn {} ->
-        :timer.sleep(200)
-
-        [yield: request_body_part, cont: rest_request_body_stream] =
-          request_body_stream.(body_part_size_in_bytes: chunk_byte_size)
-
-        IO.write(request_body_part)
-
-        [
-          yield: request_body_part,
-          cont:
-            case rest_request_body_stream do
-              nil ->
-                nil
-
-              _ ->
-                simulate_downloading_and_stream_it(
-                  request_body_stream: rest_request_body_stream,
-                  chunk_byte_size: chunk_byte_size
-                )
-            end,
-        ]
-      end
-    end
-  end
-
   setup_all do
-    {:ok, shutdown_server} =
-      Http4e.Server.GenTcp.start(handler: Handler.as_handler(), listen_port: 3000)
-
-    on_exit(shutdown_server)
+    %Http4e.Server.GenTcp{
+      listen_port: 3000,
+      response_body_stream_reader: %Http4e.BodyStream.Reader.Buffered{buffer_size_in_bytes: 1},
+    }
+    |> Http4e.Server.start(&handler/1)
+    |> on_exit()
   end
 
-  describe "GenTcp-backed webserver" do
+  describe "HTTP/1.1 GenTcp webserver" do
     test "should be able to accept GET-request" do
       assert {
                :ok,
@@ -131,6 +54,70 @@ defmodule Http4e.Server.GenTcpTest do
                  [],
                  []
                )
+    end
+  end
+
+  defp handler(assignments: %{}, request: %Http4e.Request{method: :GET, path: "/ping"}) do
+    %Http4e.Response{
+      body_stream: Coroutine.from("pong"),
+      headers: %{
+        "content-length" => 4,
+        "content-type" => "text/plain",
+      },
+      status: Http4e.Response.Status.ok(),
+    }
+  end
+
+  defp handler(
+         assignments: %{},
+         request: %Http4e.Request{method: :POST, path: "/short_article"} = request
+       ) do
+    article_review = Http4e.BodyStream.await(request.body_stream)
+
+    %Http4e.Response{
+      body_stream: Coroutine.from(article_review),
+      headers: %{
+        "content-length" => article_review |> String.length() |> to_string(),
+        "content-type" => "text/plain",
+      },
+      status: Http4e.Response.Status.ok(),
+    }
+  end
+
+  defp handler(
+         assignments: %{},
+         request: %Http4e.Request{method: :POST, path: "/long_article"} = request
+       ) do
+    %Http4e.Response{
+      body_stream: simulate_request_downloading_and_response_streaming(request.body_stream, 200),
+      headers: %{
+        "content-type" => "text/plain",
+      },
+      status: Http4e.Response.Status.ok(),
+    }
+  end
+
+  defp simulate_request_downloading_and_response_streaming(
+         request_body_stream,
+         download_delay_in_milliseconds
+       ) do
+    fn [body_part_size_in_bytes: body_part_size_in_bytes] ->
+      :timer.sleep(download_delay_in_milliseconds)
+
+      case request_body_stream.(body_part_size_in_bytes: body_part_size_in_bytes) do
+        [yield: _request_body_part, cont: nil] = last_chunk ->
+          last_chunk
+
+        [yield: request_body_part, cont: rest_request_body_stream] ->
+          [
+            yield: request_body_part,
+            cont:
+              simulate_request_downloading_and_response_streaming(
+                rest_request_body_stream,
+                download_delay_in_milliseconds
+              ),
+          ]
+      end
     end
   end
 end
