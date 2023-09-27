@@ -105,13 +105,13 @@ defmodule Http4e.Server.GenTcpTest do
       :timer.sleep(download_delay_in_milliseconds)
 
       case request_body_stream.(body_part_size_in_bytes: body_part_size_in_bytes) do
-        [yield: _request_body_part, cont: nil] = last_chunk ->
+        [yield: _request_body_part, continuation: nil] = last_chunk ->
           last_chunk
 
-        [yield: request_body_part, cont: rest_request_body_stream] ->
+        [yield: request_body_part, continuation: rest_request_body_stream] ->
           [
             yield: request_body_part,
-            cont:
+            continuation:
               simulate_request_downloading_and_response_streaming(
                 rest_request_body_stream,
                 download_delay_in_milliseconds

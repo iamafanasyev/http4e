@@ -163,7 +163,7 @@ defimpl Http4e.Server, for: Http4e.Server.GenTcp do
         {:ok, request_body_part} when is_binary(request_body_part) ->
           [
             yield: request_body_part,
-            cont:
+            continuation:
               if request_body_size_in_bytes - bytes_number > 0 do
                 build_request_body_stream(
                   incoming_connection_request_socket,

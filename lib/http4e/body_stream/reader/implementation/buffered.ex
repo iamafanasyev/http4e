@@ -11,10 +11,10 @@ defimpl Http4e.BodyStream.Reader, for: Http4e.BodyStream.Reader.Buffered do
           nil
 
         stream ->
-          [yield: body_part, cont: suspension] =
+          [yield: body_part, continuation: cont] =
             stream.(body_part_size_in_bytes: buffered_body_stream_reader.buffer_size_in_bytes)
 
-          {body_part, suspension}
+          {body_part, cont}
       end
     )
   end
